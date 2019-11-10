@@ -1,7 +1,6 @@
 package org.soraworld.randshop;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
@@ -13,14 +12,12 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
-import java.util.HashMap;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * @author Himmelt
@@ -48,6 +45,11 @@ public final class RandShop extends JavaPlugin implements Listener {
     }
 
     @Override
+    public void onDisable() {
+        save();
+    }
+
+    @Override
     public void onEnable() {
         saveDefaultConfig();
         reload();
@@ -56,6 +58,7 @@ public final class RandShop extends JavaPlugin implements Listener {
     private void reload() {
         reloadConfig();
         shopSize = getConfig().getInt("shopSize", 1);
+        shopSize = shopSize < 1 ? 1 : Math.min(shopSize, 5);
         shopTitle = getConfig().getString("shopTitle", "${player}'s Rand Shop");
         buttons.clear();
         ConfigurationSection section = getConfig().getConfigurationSection("buttons");
@@ -140,14 +143,58 @@ public final class RandShop extends JavaPlugin implements Listener {
         }
     }
 
+    private void fillShop(final Player player, final Inventory inv) {
+        Shop shop = shops.computeIfAbsent(player.getUniqueId(), uuid -> new Shop());
+        int today = Calendar.getInstance().get(Calendar.DAY_OF_YEAR);
+        if (today != shop.getLastUpdate()) {
+            float sum = 0F;
+            for (Good good : goods.values()) {
+                sum += good.getRate();
+            }
+            float avgRate = sum / goods.size();
+
+            Random random = new Random();
+            ArrayList<String> names = new ArrayList<>(goods.keySet());
+            ArrayList<String> list = new ArrayList<>();
+            while (list.size() < shopSize * 9) {
+                int num = random.nextInt(names.size());
+                String name = names.get(num);
+                Good good = goods.get(name);
+                if (good != null) {
+                    float f = random.nextFloat();
+                    if (f < good.getRate() / avgRate) {
+                        list.add(names.remove(num));
+                    }
+                }
+            }
+
+            shop.setLastUpdate(today);
+        }
+        inv.clear();
+        List<String> list = shop.getGoods();
+        for (int i = 0; i < list.size() && i < shopSize * 9; i++) {
+            Good good = goods.get(list.get(i));
+            if (good != null) {
+                inv.setItem(i + 1, good.getItem());
+            }
+        }
+        for (int i = 0; i < 9; i++) {
+            Button button = buttons.get(i);
+            if (button != null) {
+                inv.setItem(shopSize * 9 + i + 1, button.getIcon());
+            }
+        }
+    }
+
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             if ("openshop".equalsIgnoreCase(label) || "oshop".equalsIgnoreCase(label)) {
-                Inventory shop = Bukkit.createInventory(player, shopSize * 9 + 9, shopTitle.replaceAll("\\$\\{player}", player.getName()));
-                inventories.put(player.getUniqueId(), new WeakReference<>(shop));
-                player.openInventory(shop);
+                Inventory inv = Bukkit.createInventory(player, shopSize * 9 + 9, shopTitle.replaceAll("\\$\\{player}", player.getName()));
+                fillShop(player, inv);
+                inventories.put(player.getUniqueId(), new WeakReference<>(inv));
+                player.openInventory(inv);
             }
         }
         return false;

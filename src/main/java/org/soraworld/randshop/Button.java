@@ -49,4 +49,8 @@ public class Button implements ConfigurationSerializable {
     public void click(Player player) {
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.replaceAll("\\$\\{player}", player.getName()));
     }
+
+    public ItemStack getIcon() {
+        return icon;
+    }
 }

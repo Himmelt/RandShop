@@ -8,6 +8,7 @@ sourceCompatibility = targetCompatibility = 1.8
 
 dependencies {
     compile 'org.spigotmc:spigot-api:1.8-R0.1-SNAPSHOT'
+    compile files('lib/PlayerPoints.jar')
 }
 
 processResources {

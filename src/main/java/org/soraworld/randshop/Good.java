@@ -56,4 +56,12 @@ public class Good implements ConfigurationSerializable {
     public void setItem(ItemStack item) {
         this.item = item;
     }
+
+    public ItemStack getItem() {
+        return item;
+    }
+
+    public float getRate() {
+        return rate;
+    }
 }

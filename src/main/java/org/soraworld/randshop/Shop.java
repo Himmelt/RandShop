@@ -13,7 +13,8 @@ import java.util.Map;
  */
 @SerializableAs("Shop")
 public class Shop implements ConfigurationSerializable {
-    private long lastUpdate = 0;
+
+    private int lastUpdate = 0;
     private ArrayList<String> goods = new ArrayList<>();
 
     @Override
@@ -28,7 +29,7 @@ public class Shop implements ConfigurationSerializable {
         if (args != null && args.containsKey("lastUpdate") && args.containsKey("goods")) {
             try {
                 Shop shop = new Shop();
-                shop.lastUpdate = Long.parseLong(args.get("lastUpdate").toString());
+                shop.lastUpdate = Integer.parseInt(args.get("lastUpdate").toString());
                 Object goods = args.get("goods");
                 if (goods instanceof List) {
                     shop.goods.addAll((List) goods);
@@ -46,5 +47,22 @@ public class Shop implements ConfigurationSerializable {
             return goods.get(slot - 1);
         }
         return "";
+    }
+
+    public int getLastUpdate() {
+        return lastUpdate;
+    }
+
+    public void setLastUpdate(int lastUpdate) {
+        this.lastUpdate = lastUpdate;
+    }
+
+    public void setGoods(List<String> goods) {
+        this.goods.clear();
+        this.goods.addAll(goods);
+    }
+
+    public ArrayList<String> getGoods() {
+        return goods;
     }
 }
