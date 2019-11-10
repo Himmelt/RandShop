@@ -1,0 +1,14 @@
+testGood1:
+  ==: Good
+  price: 0
+  rate: 0.0
+  item:
+    type: APPLE
+    amount: 1
+testGood2:
+  ==: Good
+  price: 10
+  rate: 0.7
+  item:
+    type: STICK
+    amount: 1

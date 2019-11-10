@@ -1,0 +1,20 @@
+name: RandShop
+version: ${version}
+author: Himmelt
+main: org.soraworld.randshop.RandShop
+description: RandShop Plugin.
+permissions:
+  randshop.admin:
+    default: op
+commands:
+  openshop:
+    usage: /openshop
+    aliases:
+      - oshop
+    description: Open shop.
+  randshop:
+    usage: /rshop ...
+    aliases:
+      - rshop
+    permission-message: You need permission <randshop.admin> to execute this command.
+    description: randshop commands.
