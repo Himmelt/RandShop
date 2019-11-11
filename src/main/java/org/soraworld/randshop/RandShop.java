@@ -257,8 +257,7 @@ public final class RandShop extends JavaPlugin implements Listener {
         if (event.getInventory().getHolder() instanceof ShopHolder) {
             Set<Integer> rawSlots = event.getRawSlots();
             int min = Collections.min(rawSlots);
-            int max = Collections.max(rawSlots);
-            if (min < shopSize * 9 + 9 && max >= shopSize * 9 + 9) {
+            if (min < shopSize * 9 + 9) {
                 event.setCancelled(true);
             }
         }

@@ -3,19 +3,19 @@ shopTitle: ${player}'s Rand Shop
 buttons:
   0:
     ==: Button
-    command: say test 0
+    command: say test 1
     icon:
       type: STONE
       amount: 1
   4:
     ==: Button
-    command: say test 1
+    command: say test 5
     icon:
       type: MAP
       amount: 5
   8:
     ==: Button
-    command: say test 1
+    command: say test 9
     icon:
       type: RED_ROSE
       amount: 9
