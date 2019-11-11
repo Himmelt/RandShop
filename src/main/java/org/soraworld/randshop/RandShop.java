@@ -10,14 +10,19 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.ClickType;
+import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.ref.WeakReference;
 import java.util.*;
+
+import static org.bukkit.event.inventory.InventoryAction.COLLECT_TO_CURSOR;
+import static org.bukkit.event.inventory.InventoryAction.MOVE_TO_OTHER_INVENTORY;
 
 /**
  * @author Himmelt
@@ -29,7 +34,6 @@ public final class RandShop extends JavaPlugin implements Listener {
     private final HashMap<Integer, Button> buttons = new HashMap<>();
     private final HashMap<UUID, Shop> shops = new HashMap<>();
     private final HashMap<String, Good> goods = new HashMap<>();
-    private final HashMap<UUID, WeakReference<Inventory>> inventories = new HashMap<>();
 
     private File goodsFile, shopsFile;
     private final YamlConfiguration goodsYaml = new YamlConfiguration();
@@ -45,14 +49,10 @@ public final class RandShop extends JavaPlugin implements Listener {
     }
 
     @Override
-    public void onDisable() {
-        save();
-    }
-
-    @Override
     public void onEnable() {
         saveDefaultConfig();
         reload();
+        Bukkit.getPluginManager().registerEvents(this, this);
     }
 
     private void reload() {
@@ -67,7 +67,7 @@ public final class RandShop extends JavaPlugin implements Listener {
                 int slot = Integer.parseInt(key);
                 try {
                     Button button = (Button) section.get(key);
-                    if (slot >= 1 && slot <= 9 && button != null) {
+                    if (slot >= 0 && slot <= 8 && button != null) {
                         buttons.put(slot, button);
                     }
                 } catch (Throwable e) {
@@ -80,8 +80,10 @@ public final class RandShop extends JavaPlugin implements Listener {
             goodsYaml.load(goodsFile);
             goods.clear();
             for (String key : goodsYaml.getKeys(false)) {
+                System.out.println(key);
                 try {
                     Good good = (Good) goodsYaml.get(key);
+                    System.out.println(good);
                     if (good != null) {
                         goods.put(key, good);
                     }
@@ -114,12 +116,20 @@ public final class RandShop extends JavaPlugin implements Listener {
 
     private void save() {
         saveConfig();
+        saveGoods();
+        saveShops();
+    }
+
+    private void saveGoods() {
         try {
             goods.forEach(goodsYaml::set);
             goodsYaml.save(goodsFile);
         } catch (Throwable e) {
             e.printStackTrace();
         }
+    }
+
+    private void saveShops() {
         try {
             shops.forEach(((uuid, shop) -> shopsYaml.set(uuid.toString(), shop)));
             shopsYaml.save(shopsFile);
@@ -156,32 +166,35 @@ public final class RandShop extends JavaPlugin implements Listener {
             Random random = new Random();
             ArrayList<String> names = new ArrayList<>(goods.keySet());
             ArrayList<String> list = new ArrayList<>();
-            while (list.size() < shopSize * 9) {
+            int time = 0;
+            while (list.size() < shopSize * 9 && time < 100) {
                 int num = random.nextInt(names.size());
                 String name = names.get(num);
                 Good good = goods.get(name);
                 if (good != null) {
                     float f = random.nextFloat();
                     if (f < good.getRate() / avgRate) {
-                        list.add(names.remove(num));
+                        list.add(name);
                     }
                 }
+                time++;
             }
 
             shop.setLastUpdate(today);
+            saveShops();
         }
         inv.clear();
         List<String> list = shop.getGoods();
         for (int i = 0; i < list.size() && i < shopSize * 9; i++) {
             Good good = goods.get(list.get(i));
             if (good != null) {
-                inv.setItem(i + 1, good.getItem());
+                inv.setItem(i, good.getItem());
             }
         }
-        for (int i = 0; i < 9; i++) {
+        for (int i = 0; i <= 8; i++) {
             Button button = buttons.get(i);
             if (button != null) {
-                inv.setItem(shopSize * 9 + i + 1, button.getIcon());
+                inv.setItem(shopSize * 9 + i, button.getIcon());
             }
         }
     }
@@ -191,9 +204,8 @@ public final class RandShop extends JavaPlugin implements Listener {
         if (sender instanceof Player) {
             Player player = (Player) sender;
             if ("openshop".equalsIgnoreCase(label) || "oshop".equalsIgnoreCase(label)) {
-                Inventory inv = Bukkit.createInventory(player, shopSize * 9 + 9, shopTitle.replaceAll("\\$\\{player}", player.getName()));
+                Inventory inv = Bukkit.createInventory(new ShopHolder(player.getUniqueId()), shopSize * 9 + 9, shopTitle.replaceAll("\\$\\{player}", player.getName()));
                 fillShop(player, inv);
-                inventories.put(player.getUniqueId(), new WeakReference<>(inv));
                 player.openInventory(inv);
             }
         }
@@ -203,27 +215,51 @@ public final class RandShop extends JavaPlugin implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onInventoryClick(InventoryClickEvent event) {
         Player player = (Player) event.getWhoClicked();
-        if (inventories.get(player.getUniqueId()) == event.getClickedInventory()) {
-            event.setCancelled(true);
-            if (event.getClick() == ClickType.LEFT) {
-                int slot = event.getSlot();
-                if (slot >= 1 && slot <= shopSize * 9) {
-                    Shop shop = shops.get(player.getUniqueId());
-                    if (shop != null) {
-                        Good good = goods.get(shop.getGood(slot));
-                        if (good != null) {
-                            good.buy(player);
+        UUID uuid = player.getUniqueId();
+        Inventory inv = event.getInventory();
+        if (inv != null && inv.getHolder() instanceof ShopHolder) {
+            InventoryAction action = event.getAction();
+            if (action == COLLECT_TO_CURSOR || action == MOVE_TO_OTHER_INVENTORY) {
+                event.setCancelled(true);
+            }
+        }
+        Inventory click = event.getClickedInventory();
+        if (click != null) {
+            InventoryHolder holder = click.getHolder();
+            if (holder instanceof ShopHolder) {
+                event.setCancelled(true);
+                if (uuid.equals(((ShopHolder) holder).getUuid()) && event.getClick() == ClickType.LEFT) {
+                    int slot = event.getSlot();
+                    if (slot >= 0 && slot < shopSize * 9) {
+                        Shop shop = shops.get(uuid);
+                        if (shop != null) {
+                            Good good = goods.get(shop.getGood(slot));
+                            if (good != null) {
+                                good.buy(player);
+                            }
                         }
-                    }
-                } else {
-                    int btn = slot - shopSize * 9;
-                    if (btn >= 1 && btn <= 9) {
-                        Button button = buttons.get(btn);
-                        if (button != null) {
-                            button.click(player);
+                    } else {
+                        int btn = slot - shopSize * 9;
+                        if (btn >= 0 && btn <= 8) {
+                            Button button = buttons.get(btn);
+                            if (button != null) {
+                                button.click(player);
+                            }
                         }
                     }
                 }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onInventoryDrag(InventoryDragEvent event) {
+        if (event.getInventory().getHolder() instanceof ShopHolder) {
+            Set<Integer> rawSlots = event.getRawSlots();
+            int min = Collections.min(rawSlots);
+            int max = Collections.max(rawSlots);
+            if (min < shopSize * 9 + 9 && max >= shopSize * 9 + 9) {
+                event.setCancelled(true);
             }
         }
     }

@@ -1,14 +1,21 @@
 testGood1:
   ==: Good
   price: 0
-  rate: 0.0
+  rate: 1.0
   item:
     type: APPLE
     amount: 1
 testGood2:
   ==: Good
   price: 10
-  rate: 0.7
+  rate: 1.0
   item:
     type: STICK
+    amount: 1
+testGood3:
+  ==: Good
+  price: 10
+  rate: 1.0
+  item:
+    type: TNT
     amount: 1

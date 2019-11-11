@@ -1,3 +1,21 @@
-shopSize: 1
+shopSize: 3
 shopTitle: ${player}'s Rand Shop
-buttons: []
+buttons:
+  0:
+    ==: Button
+    command: say test 0
+    icon:
+      type: STONE
+      amount: 1
+  4:
+    ==: Button
+    command: say test 1
+    icon:
+      type: MAP
+      amount: 5
+  8:
+    ==: Button
+    command: say test 1
+    icon:
+      type: RED_ROSE
+      amount: 9

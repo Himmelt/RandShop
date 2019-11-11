@@ -43,8 +43,8 @@ public class Shop implements ConfigurationSerializable {
     }
 
     public String getGood(int slot) {
-        if (slot >= 1 && slot <= goods.size()) {
-            return goods.get(slot - 1);
+        if (slot >= 0 && slot < goods.size()) {
+            return goods.get(slot);
         }
         return "";
     }
