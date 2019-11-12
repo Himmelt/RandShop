@@ -17,6 +17,7 @@ import java.util.Map;
 public class Button implements ConfigurationSerializable {
 
     private String command = "say ${player} pressed button test!";
+    private boolean serverCmd = false;
     private ItemStack icon = new ItemStack(Material.MAP, 1);
 
     public Button() {
@@ -31,6 +32,7 @@ public class Button implements ConfigurationSerializable {
     public Map<String, Object> serialize() {
         LinkedHashMap<String, Object> map = new LinkedHashMap<>();
         map.put("command", command);
+        map.put("serverCmd", serverCmd);
         if (icon != null) {
             map.put("icon", icon.serialize());
         }
@@ -42,6 +44,7 @@ public class Button implements ConfigurationSerializable {
             try {
                 Button button = new Button();
                 button.command = args.getOrDefault("command", "").toString();
+                button.serverCmd = Boolean.parseBoolean(args.getOrDefault("serverCmd", false).toString());
                 Object item = args.get("icon");
                 if (item instanceof Map) {
                     button.icon = ItemStack.deserialize((Map) item);
@@ -55,7 +58,11 @@ public class Button implements ConfigurationSerializable {
     }
 
     public void click(Player player) {
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.replaceAll("\\$\\{player}", player.getName()));
+        if (serverCmd) {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.replaceAll("\\$\\{player}", player.getName()));
+        } else {
+            player.performCommand(command.replaceAll("\\$\\{player}", player.getName()));
+        }
     }
 
     public ItemStack getIcon() {

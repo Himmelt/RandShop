@@ -30,6 +30,5 @@ commands:
     permission: randshop.admin
     permission-message: You need permission <randshop.admin> to execute this command.
   rerand:
-    usage: /rerand <name>
-    permission: randshop.admin
+    usage: /rerand
     permission-message: You need permission <randshop.admin> to execute this command.

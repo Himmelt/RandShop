@@ -145,6 +145,14 @@ public final class RandShop extends JavaPlugin implements Listener {
     }
 
     @Override
+    public void saveConfig() {
+        getConfig().set("shopSize", shopSize);
+        getConfig().set("refreshPrice", refreshPrice);
+        getConfig().set("shopTitle", shopTitle);
+        super.saveConfig();
+    }
+
+    @Override
     public void saveDefaultConfig() {
         super.saveDefaultConfig();
         if (!goodsFile.exists()) {
@@ -227,6 +235,13 @@ public final class RandShop extends JavaPlugin implements Listener {
                     } else {
                         sender.sendMessage(command.getPermissionMessage());
                     }
+                } else if (args.length == 1 && "save".equalsIgnoreCase(args[0])) {
+                    if (sender.hasPermission("randshop.admin")) {
+                        save();
+                        sender.sendMessage("Config saved.");
+                    } else {
+                        sender.sendMessage(command.getPermissionMessage());
+                    }
                 } else {
                     sender.sendMessage("Only in-game players can run this command without args.");
                 }
@@ -293,30 +308,36 @@ public final class RandShop extends JavaPlugin implements Listener {
                 break;
             }
             case "rerand": {
-                if (args.length == 1) {
-                    if (sender.hasPermission("randshop.admin")) {
-                        Player player = Bukkit.getPlayerExact(args[0]);
-                        if (player != null) {
-                            if (Eco.hasEco(player, refreshPrice) && Eco.takeEco(player, refreshPrice)) {
-                                randShop(player, true);
-                                InventoryView view = player.getOpenInventory();
-                                if (view != null) {
-                                    Inventory top = view.getTopInventory();
-                                    if (top != null && top.getHolder() instanceof ShopHolder) {
-                                        fillShop(player, top);
-                                    }
-                                }
-                            } else {
-                                player.sendMessage("You have not enough money.");
+                if (args.length == 0 && sender instanceof Player) {
+                    Player player = (Player) sender;
+                    if (Eco.hasEco(player, refreshPrice) && Eco.takeEco(player, refreshPrice)) {
+                        randShop(player, true);
+                        InventoryView view = player.getOpenInventory();
+                        if (view != null) {
+                            Inventory top = view.getTopInventory();
+                            if (top != null && top.getHolder() instanceof ShopHolder) {
+                                fillShop(player, top);
                             }
-                        } else {
-                            sender.sendMessage("The player doesn't exist.");
                         }
                     } else {
-                        sender.sendMessage(command.getPermissionMessage());
+                        player.sendMessage("You have not enough money.");
+                    }
+                } else if (args.length == 1 && sender.hasPermission("randshop.admin")) {
+                    Player player = Bukkit.getPlayerExact(args[0]);
+                    if (player != null) {
+                        randShop(player, true);
+                        InventoryView view = player.getOpenInventory();
+                        if (view != null) {
+                            Inventory top = view.getTopInventory();
+                            if (top != null && top.getHolder() instanceof ShopHolder) {
+                                fillShop(player, top);
+                            }
+                        }
+                    } else {
+                        sender.sendMessage("The player doesn't exist.");
                     }
                 } else {
-                    sender.sendMessage(command.getUsage());
+                    sender.sendMessage(command.getPermissionMessage());
                 }
                 break;
             }

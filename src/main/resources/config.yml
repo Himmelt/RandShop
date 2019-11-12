@@ -1,21 +1,25 @@
 shopSize: 3
+refreshPrice: 100
 shopTitle: ${player}'s Rand Shop
 buttons:
   0:
     ==: Button
     command: say test 1
+    serverCmd: true
     icon:
       type: STONE
       amount: 1
   4:
     ==: Button
     command: say test 5
+    serverCmd: true
     icon:
       type: MAP
       amount: 5
   8:
     ==: Button
-    command: say test 9
+    command: rerand
+    serverCmd: false
     icon:
       type: RED_ROSE
       amount: 9
