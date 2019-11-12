@@ -63,6 +63,6 @@ public class Shop implements ConfigurationSerializable {
     }
 
     public ArrayList<String> getGoods() {
-        return goods;
+        return new ArrayList<>(goods);
     }
 }

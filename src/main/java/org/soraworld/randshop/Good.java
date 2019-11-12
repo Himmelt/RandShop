@@ -63,7 +63,7 @@ public class Good implements ConfigurationSerializable {
             player.getInventory().addItem(item.clone());
             player.sendMessage("You buy this good.");
         } else {
-            player.sendMessage("You have no enough money.");
+            player.sendMessage("You have not enough money.");
         }
     }
 

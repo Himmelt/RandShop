@@ -16,6 +16,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -31,7 +32,8 @@ import static org.bukkit.event.inventory.InventoryAction.MOVE_TO_OTHER_INVENTORY
  */
 public final class RandShop extends JavaPlugin implements Listener {
 
-    private int shopSize = 1;
+    private int shopSize = 3;
+    private int refreshPrice = 100;
     private String shopTitle = "${player}'s Rand Shop";
     private long sumAmount = 0;
     private final HashMap<Integer, Button> buttons = new HashMap<>();
@@ -62,6 +64,8 @@ public final class RandShop extends JavaPlugin implements Listener {
         reloadConfig();
         shopSize = getConfig().getInt("shopSize", 1);
         shopSize = shopSize < 1 ? 1 : Math.min(shopSize, 5);
+        refreshPrice = getConfig().getInt("refreshPrice", 100);
+        refreshPrice = Math.max(refreshPrice, 0);
         shopTitle = getConfig().getString("shopTitle", "${player}'s Rand Shop");
         buttons.clear();
         ConfigurationSection section = getConfig().getConfigurationSection("buttons");
@@ -163,13 +167,29 @@ public final class RandShop extends JavaPlugin implements Listener {
     }
 
     private void fillShop(final Player player, final Inventory inv) {
+        inv.clear();
+        List<String> list = shops.computeIfAbsent(player.getUniqueId(), uuid -> new Shop()).getGoods();
+        for (int i = 0; i < list.size() && i < shopSize * 9; i++) {
+            Good good = goods.get(list.get(i));
+            if (good != null) {
+                inv.setItem(i, good.getItem());
+            }
+        }
+        for (int i = 0; i <= 8; i++) {
+            Button button = buttons.get(i);
+            if (button != null) {
+                inv.setItem(shopSize * 9 + i, button.getIcon());
+            }
+        }
+    }
+
+    private void randShop(final Player player, boolean force) {
         Shop shop = shops.computeIfAbsent(player.getUniqueId(), uuid -> new Shop());
         int today = Calendar.getInstance().get(Calendar.DAY_OF_YEAR);
-        if (today != shop.getLastUpdate()) {
+        if (today != shop.getLastUpdate() || force) {
             Random random = new Random();
             final ArrayList<String> names = new ArrayList<>(goods.keySet());
             final ArrayList<String> list = new ArrayList<>();
-
             for (int times = 0; times < shopSize * 90 && list.size() < shopSize * 9; times++) {
                 int num = random.nextInt(names.size());
                 String name = names.get(num);
@@ -185,21 +205,6 @@ public final class RandShop extends JavaPlugin implements Listener {
             shop.setLastUpdate(today);
             saveShops();
         }
-
-        inv.clear();
-        List<String> list = shop.getGoods();
-        for (int i = 0; i < list.size() && i < shopSize * 9; i++) {
-            Good good = goods.get(list.get(i));
-            if (good != null) {
-                inv.setItem(i, good.getItem());
-            }
-        }
-        for (int i = 0; i <= 8; i++) {
-            Button button = buttons.get(i);
-            if (button != null) {
-                inv.setItem(shopSize * 9 + i, button.getIcon());
-            }
-        }
     }
 
     @Override
@@ -212,6 +217,7 @@ public final class RandShop extends JavaPlugin implements Listener {
                 if (args.length == 0 && sender instanceof Player) {
                     Player player = (Player) sender;
                     Inventory inv = Bukkit.createInventory(new ShopHolder(player.getUniqueId()), shopSize * 9 + 9, shopTitle.replaceAll("\\$\\{player}", player.getName()));
+                    randShop(player, false);
                     fillShop(player, inv);
                     player.openInventory(inv);
                 } else if (args.length == 1 && "reload".equalsIgnoreCase(args[0])) {
@@ -283,6 +289,34 @@ public final class RandShop extends JavaPlugin implements Listener {
                     }
                 } else {
                     sender.sendMessage(command.getPermissionMessage());
+                }
+                break;
+            }
+            case "rerand": {
+                if (args.length == 1) {
+                    if (sender.hasPermission("randshop.admin")) {
+                        Player player = Bukkit.getPlayerExact(args[0]);
+                        if (player != null) {
+                            if (Eco.hasEco(player, refreshPrice) && Eco.takeEco(player, refreshPrice)) {
+                                randShop(player, true);
+                                InventoryView view = player.getOpenInventory();
+                                if (view != null) {
+                                    Inventory top = view.getTopInventory();
+                                    if (top != null && top.getHolder() instanceof ShopHolder) {
+                                        fillShop(player, top);
+                                    }
+                                }
+                            } else {
+                                player.sendMessage("You have not enough money.");
+                            }
+                        } else {
+                            sender.sendMessage("The player doesn't exist.");
+                        }
+                    } else {
+                        sender.sendMessage(command.getPermissionMessage());
+                    }
+                } else {
+                    sender.sendMessage(command.getUsage());
                 }
                 break;
             }
