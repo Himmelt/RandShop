@@ -1,6 +1,7 @@
 package org.soraworld.randshop;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
@@ -15,6 +16,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -31,6 +33,7 @@ public final class RandShop extends JavaPlugin implements Listener {
 
     private int shopSize = 1;
     private String shopTitle = "${player}'s Rand Shop";
+    private long sumAmount = 0;
     private final HashMap<Integer, Button> buttons = new HashMap<>();
     private final HashMap<UUID, Shop> shops = new HashMap<>();
     private final HashMap<String, Good> goods = new HashMap<>();
@@ -80,10 +83,8 @@ public final class RandShop extends JavaPlugin implements Listener {
             goodsYaml.load(goodsFile);
             goods.clear();
             for (String key : goodsYaml.getKeys(false)) {
-                System.out.println(key);
                 try {
                     Good good = (Good) goodsYaml.get(key);
-                    System.out.println(good);
                     if (good != null) {
                         goods.put(key, good);
                     }
@@ -94,6 +95,7 @@ public final class RandShop extends JavaPlugin implements Listener {
         } catch (Throwable e) {
             e.printStackTrace();
         }
+        calcSumAmount();
         /* Shops */
         try {
             shopsYaml.load(shopsFile);
@@ -153,36 +155,37 @@ public final class RandShop extends JavaPlugin implements Listener {
         }
     }
 
+    private void calcSumAmount() {
+        sumAmount = 0;
+        for (Good good : goods.values()) {
+            sumAmount += good.getAmount();
+        }
+    }
+
     private void fillShop(final Player player, final Inventory inv) {
         Shop shop = shops.computeIfAbsent(player.getUniqueId(), uuid -> new Shop());
         int today = Calendar.getInstance().get(Calendar.DAY_OF_YEAR);
         if (today != shop.getLastUpdate()) {
-            float sum = 0F;
-            for (Good good : goods.values()) {
-                sum += good.getRate();
-            }
-            float avgRate = sum / goods.size();
-
             Random random = new Random();
-            ArrayList<String> names = new ArrayList<>(goods.keySet());
-            ArrayList<String> list = new ArrayList<>();
-            int time = 0;
-            while (list.size() < shopSize * 9 && time < 100) {
+            final ArrayList<String> names = new ArrayList<>(goods.keySet());
+            final ArrayList<String> list = new ArrayList<>();
+
+            for (int times = 0; times < shopSize * 90 && list.size() < shopSize * 9; times++) {
                 int num = random.nextInt(names.size());
                 String name = names.get(num);
                 Good good = goods.get(name);
                 if (good != null) {
-                    float f = random.nextFloat();
-                    if (f < good.getRate() / avgRate) {
+                    double rate = random.nextDouble();
+                    if (rate <= good.getRate(sumAmount)) {
                         list.add(name);
                     }
                 }
-                time++;
             }
-
+            shop.setGoods(list);
             shop.setLastUpdate(today);
             saveShops();
         }
+
         inv.clear();
         List<String> list = shop.getGoods();
         for (int i = 0; i < list.size() && i < shopSize * 9; i++) {
@@ -201,15 +204,92 @@ public final class RandShop extends JavaPlugin implements Listener {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (sender instanceof Player) {
-            Player player = (Player) sender;
-            if ("openshop".equalsIgnoreCase(label) || "oshop".equalsIgnoreCase(label)) {
-                Inventory inv = Bukkit.createInventory(new ShopHolder(player.getUniqueId()), shopSize * 9 + 9, shopTitle.replaceAll("\\$\\{player}", player.getName()));
-                fillShop(player, inv);
-                player.openInventory(inv);
+        switch (label) {
+            case "rs":
+            case "shop":
+            case "rshop":
+            case "randshop": {
+                if (args.length == 0 && sender instanceof Player) {
+                    Player player = (Player) sender;
+                    Inventory inv = Bukkit.createInventory(new ShopHolder(player.getUniqueId()), shopSize * 9 + 9, shopTitle.replaceAll("\\$\\{player}", player.getName()));
+                    fillShop(player, inv);
+                    player.openInventory(inv);
+                } else if (args.length == 1 && "reload".equalsIgnoreCase(args[0])) {
+                    if (sender.hasPermission("randshop.admin")) {
+                        reload();
+                        sender.sendMessage("Config reloaded.");
+                    } else {
+                        sender.sendMessage(command.getPermissionMessage());
+                    }
+                } else {
+                    sender.sendMessage("Only in-game players can run this command without args.");
+                }
+                break;
             }
+            case "addgood":
+            case "agood": {
+                if (sender.hasPermission("randshop.admin")) {
+                    if (sender instanceof Player) {
+                        if (args.length == 3) {
+                            ItemStack stack = ((Player) sender).getItemInHand();
+                            if (stack != null && stack.getType() != Material.AIR) {
+                                try {
+                                    Good good = new Good(Integer.parseInt(args[1]), Integer.parseInt(args[2]), stack);
+                                    goods.put(args[0], good);
+                                    sender.sendMessage("Add good: " + args[0]);
+                                    calcSumAmount();
+                                    saveGoods();
+                                } catch (Throwable e) {
+                                    e.printStackTrace();
+                                }
+                            } else {
+                                sender.sendMessage("You must hold an item in hand.");
+                            }
+                        } else {
+                            sender.sendMessage(command.getUsage());
+                        }
+                    } else {
+                        sender.sendMessage("Only in-game players can run this command.");
+                    }
+                } else {
+                    sender.sendMessage(command.getPermissionMessage());
+                }
+                break;
+            }
+            case "setbutton":
+            case "sbutton": {
+                if (sender.hasPermission("randshop.admin")) {
+                    if (sender instanceof Player) {
+                        if (args.length == 1) {
+                            ItemStack stack = ((Player) sender).getItemInHand();
+                            try {
+                                int index = Integer.parseInt(args[0]);
+                                if (index >= 0 && index <= 8) {
+                                    Button button = buttons.computeIfAbsent(index, i -> new Button(stack, "say hello button"));
+                                    button.setIcon(stack);
+                                    sender.sendMessage("Set button at " + index);
+                                    saveConfig();
+                                } else {
+                                    sender.sendMessage("Button index must be in [ 0 , 8 ] slot");
+                                }
+                            } catch (Throwable e) {
+                                e.printStackTrace();
+                            }
+                        } else {
+                            sender.sendMessage(command.getUsage());
+                        }
+                    } else {
+                        sender.sendMessage("Only in-game players can run this command.");
+                    }
+                } else {
+                    sender.sendMessage(command.getPermissionMessage());
+                }
+                break;
+            }
+            default:
+                sender.sendMessage(command.getUsage());
         }
-        return false;
+        return true;
     }
 
     @EventHandler(ignoreCancelled = true)

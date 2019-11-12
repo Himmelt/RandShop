@@ -25,10 +25,10 @@ public final class Eco {
     }
 
     public static boolean hasEco(Player player, int amount) {
-        return api != null && api.look(player.getUniqueId()) >= amount;
+        return getApi() != null && getApi().look(player.getUniqueId()) >= amount;
     }
 
     public static boolean takeEco(Player player, int amount) {
-        return api != null && api.take(player.getUniqueId(), amount);
+        return getApi() != null && getApi().take(player.getUniqueId(), amount);
     }
 }

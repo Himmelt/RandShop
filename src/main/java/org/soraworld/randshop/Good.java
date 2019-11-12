@@ -14,15 +14,26 @@ import java.util.Map;
 @SerializableAs("Good")
 public class Good implements ConfigurationSerializable {
 
-    private int price = 0;
-    private float rate = 0F;
+    private int price = Integer.MAX_VALUE;
+    private int amount = 1;
     private ItemStack item = null;
+
+    public Good() {
+    }
+
+    public Good(int price, int amount, ItemStack item) {
+        price = Math.max(0, price);
+        amount = Math.max(0, amount);
+        this.price = price;
+        this.amount = amount;
+        this.item = item.clone();
+    }
 
     @Override
     public Map<String, Object> serialize() {
         LinkedHashMap<String, Object> map = new LinkedHashMap<>();
         map.put("price", price);
-        map.put("rate", rate);
+        map.put("amount", amount);
         if (item != null) {
             map.put("item", item.serialize());
         }
@@ -30,11 +41,11 @@ public class Good implements ConfigurationSerializable {
     }
 
     public static Good deserialize(Map<String, Object> args) {
-        if (args != null && args.containsKey("price") && args.containsKey("rate") && args.containsKey("item")) {
+        if (args != null && args.containsKey("price") && args.containsKey("amount") && args.containsKey("item")) {
             try {
                 Good good = new Good();
                 good.price = Integer.parseInt(args.get("price").toString());
-                good.rate = Float.parseFloat(args.get("rate").toString());
+                good.amount = Integer.parseInt(args.get("amount").toString());
                 Object item = args.get("item");
                 if (item instanceof Map) {
                     good.item = ItemStack.deserialize((Map) item);
@@ -50,18 +61,25 @@ public class Good implements ConfigurationSerializable {
     public void buy(Player player) {
         if (item != null && Eco.hasEco(player, price) && Eco.takeEco(player, price)) {
             player.getInventory().addItem(item.clone());
+            player.sendMessage("You buy this good.");
+        } else {
+            player.sendMessage("You have no enough money.");
         }
     }
 
     public void setItem(ItemStack item) {
-        this.item = item;
+        this.item = item.clone();
     }
 
     public ItemStack getItem() {
-        return item;
+        return item.clone();
     }
 
-    public float getRate() {
-        return rate;
+    public int getAmount() {
+        return amount;
+    }
+
+    public double getRate(long sum) {
+        return amount * 1.0D / sum;
     }
 }

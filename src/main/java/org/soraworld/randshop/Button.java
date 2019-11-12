@@ -19,6 +19,14 @@ public class Button implements ConfigurationSerializable {
     private String command = "say ${player} pressed button test!";
     private ItemStack icon = new ItemStack(Material.MAP, 1);
 
+    public Button() {
+    }
+
+    public Button(ItemStack icon, String command) {
+        this.icon = icon.clone();
+        this.command = command;
+    }
+
     @Override
     public Map<String, Object> serialize() {
         LinkedHashMap<String, Object> map = new LinkedHashMap<>();
@@ -51,6 +59,10 @@ public class Button implements ConfigurationSerializable {
     }
 
     public ItemStack getIcon() {
-        return icon;
+        return icon.clone();
+    }
+
+    public void setIcon(ItemStack icon) {
+        this.icon = icon.clone();
     }
 }
