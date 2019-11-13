@@ -7,7 +7,9 @@ import org.bukkit.configuration.serialization.SerializableAs;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -16,8 +18,7 @@ import java.util.Map;
 @SerializableAs("Button")
 public class Button implements ConfigurationSerializable {
 
-    private String command = "say ${player} pressed button test!";
-    private boolean serverCmd = false;
+    private List<String> commands = new ArrayList<>();
     private ItemStack icon = new ItemStack(Material.MAP, 1);
 
     public Button() {
@@ -25,14 +26,17 @@ public class Button implements ConfigurationSerializable {
 
     public Button(ItemStack icon, String command) {
         this.icon = icon.clone();
-        this.command = command;
+        this.commands.add(command);
+    }
+
+    public Button(ItemStack stack) {
+        this.icon = stack;
     }
 
     @Override
     public Map<String, Object> serialize() {
         LinkedHashMap<String, Object> map = new LinkedHashMap<>();
-        map.put("command", command);
-        map.put("serverCmd", serverCmd);
+        map.put("commands", commands);
         if (icon != null) {
             map.put("icon", icon.serialize());
         }
@@ -40,11 +44,10 @@ public class Button implements ConfigurationSerializable {
     }
 
     public static Button deserialize(Map<String, Object> args) {
-        if (args != null && args.containsKey("command") && args.containsKey("icon")) {
+        if (args != null && args.containsKey("commands") && args.containsKey("icon")) {
             try {
                 Button button = new Button();
-                button.command = args.getOrDefault("command", "").toString();
-                button.serverCmd = Boolean.parseBoolean(args.getOrDefault("serverCmd", false).toString());
+                button.commands = (List<String>) args.getOrDefault("commands", new ArrayList<String>());
                 Object item = args.get("icon");
                 if (item instanceof Map) {
                     button.icon = ItemStack.deserialize((Map) item);
@@ -58,10 +61,13 @@ public class Button implements ConfigurationSerializable {
     }
 
     public void click(Player player) {
-        if (serverCmd) {
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.replaceAll("\\$\\{player}", player.getName()));
-        } else {
-            player.performCommand(command.replaceAll("\\$\\{player}", player.getName()));
+        for (String command : commands) {
+            if (command.startsWith("server|")) {
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.trim().substring(7).trim()
+                        .replaceAll("\\$\\{player}", player.getName()));
+            } else {
+                player.performCommand(command.trim().replaceAll("\\$\\{player}", player.getName()));
+            }
         }
     }
 

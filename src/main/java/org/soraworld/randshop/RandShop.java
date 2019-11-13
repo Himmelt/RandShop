@@ -286,7 +286,7 @@ public final class RandShop extends JavaPlugin implements Listener {
                             try {
                                 int index = Integer.parseInt(args[0]);
                                 if (index >= 0 && index <= 8) {
-                                    Button button = buttons.computeIfAbsent(index, i -> new Button(stack, "say hello button"));
+                                    Button button = buttons.computeIfAbsent(index, i -> new Button(stack));
                                     button.setIcon(stack);
                                     sender.sendMessage("Set button at " + index);
                                     saveConfig();

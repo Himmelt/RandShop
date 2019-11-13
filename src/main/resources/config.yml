@@ -4,22 +4,25 @@ shopTitle: ${player}'s Rand Shop
 buttons:
   0:
     ==: Button
-    command: say test 1
-    serverCmd: true
+    commands:
+      - server| say button server command test for ${player}!
+      - say button player command test for ${player}!
     icon:
       type: STONE
       amount: 1
   4:
     ==: Button
-    command: say test 5
-    serverCmd: true
+    commands:
+      - server| say button server command test for ${player}!
+      - say button player command test for ${player}!
     icon:
       type: MAP
       amount: 5
   8:
     ==: Button
-    command: rerand
-    serverCmd: false
+    commands:
+      - server| say button server command test for ${player}!
+      - say button player command test for ${player}!
     icon:
       type: RED_ROSE
       amount: 9

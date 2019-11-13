@@ -22,19 +22,22 @@ shopTitle: ${player}'s Rand Shop
 buttons:
   0: # 位置
     ==: Button # 序列化识别，不要修改
-    command: say test 1  # 按钮指令，${player} 会替换成对应玩家名
-    serverCmd: true # 是否由服务器执行该指令, false 为玩家执行
+    commands: # 按钮指令，${player} 会替换成对应玩家名
+      - server| say button server command test for ${player}! # server| 开头由服务器执行该指令, 否则为玩家执行
+      - say button player command test for ${player}!
     icon: # 按钮图标，以下内容为完整的 itemstack 标签，不知道怎么填写请使用指令设置后再微调
       type: STONE
       amount: 1
   4:
     ==: Button
-    command: rerand
-    serverCmd: false
+    commands:
+      - server| say button server command test for ${player}!
+      - say button player command test for ${player}!
     icon:
       type: MAP
       amount: 5
 ```
+
 ### 商品池配置
 ```yaml
 # 商品标识名，不可重复
