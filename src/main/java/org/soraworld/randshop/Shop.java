@@ -49,6 +49,13 @@ public class Shop implements ConfigurationSerializable {
         return "";
     }
 
+    public String setGood(int slot, String name) {
+        if (slot >= 0 && slot < goods.size()) {
+            return goods.set(slot, name);
+        }
+        return "";
+    }
+
     public int getLastUpdate() {
         return lastUpdate;
     }

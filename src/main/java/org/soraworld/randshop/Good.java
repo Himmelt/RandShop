@@ -58,12 +58,14 @@ public class Good implements ConfigurationSerializable {
         return null;
     }
 
-    public void buy(Player player) {
+    public boolean sell(Player player) {
         if (item != null && Eco.hasEco(player, price) && Eco.takeEco(player, price)) {
             player.getInventory().addItem(item.clone());
             player.sendMessage("You buy this good.");
+            return true;
         } else {
             player.sendMessage("You have not enough money.");
+            return false;
         }
     }
 

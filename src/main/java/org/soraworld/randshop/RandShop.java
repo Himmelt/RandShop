@@ -44,6 +44,8 @@ public final class RandShop extends JavaPlugin implements Listener {
     private final YamlConfiguration goodsYaml = new YamlConfiguration();
     private final YamlConfiguration shopsYaml = new YamlConfiguration();
 
+    public static final String EMPTY_GOOD = "EMPTY_GOOD";
+
     @Override
     public void onLoad() {
         ConfigurationSerialization.registerClass(Shop.class, "Shop");
@@ -87,13 +89,15 @@ public final class RandShop extends JavaPlugin implements Listener {
             goodsYaml.load(goodsFile);
             goods.clear();
             for (String key : goodsYaml.getKeys(false)) {
-                try {
-                    Good good = (Good) goodsYaml.get(key);
-                    if (good != null) {
-                        goods.put(key, good);
+                if (!EMPTY_GOOD.equals(key)) {
+                    try {
+                        Good good = (Good) goodsYaml.get(key);
+                        if (good != null) {
+                            goods.put(key, good);
+                        }
+                    } catch (Throwable e) {
+                        e.printStackTrace();
                     }
-                } catch (Throwable e) {
-                    e.printStackTrace();
                 }
             }
         } catch (Throwable e) {
@@ -181,6 +185,8 @@ public final class RandShop extends JavaPlugin implements Listener {
             Good good = goods.get(list.get(i));
             if (good != null) {
                 inv.setItem(i, good.getItem());
+            } else {
+                inv.setItem(i, null);
             }
         }
         for (int i = 0; i <= 8; i++) {
@@ -254,14 +260,18 @@ public final class RandShop extends JavaPlugin implements Listener {
                         if (args.length == 3) {
                             ItemStack stack = ((Player) sender).getItemInHand();
                             if (stack != null && stack.getType() != Material.AIR) {
-                                try {
-                                    Good good = new Good(Integer.parseInt(args[1]), Integer.parseInt(args[2]), stack);
-                                    goods.put(args[0], good);
-                                    sender.sendMessage("Add good: " + args[0]);
-                                    calcSumAmount();
-                                    saveGoods();
-                                } catch (Throwable e) {
-                                    e.printStackTrace();
+                                if (!EMPTY_GOOD.equals(args[0])) {
+                                    try {
+                                        Good good = new Good(Integer.parseInt(args[1]), Integer.parseInt(args[2]), stack);
+                                        goods.put(args[0], good);
+                                        sender.sendMessage("Add good: " + args[0]);
+                                        calcSumAmount();
+                                        saveGoods();
+                                    } catch (Throwable e) {
+                                        e.printStackTrace();
+                                    }
+                                } else {
+                                    sender.sendMessage("You can't set the reserved word [" + EMPTY_GOOD + "] as name for a good.");
                                 }
                             } else {
                                 sender.sendMessage("You must hold an item in hand.");
@@ -369,8 +379,10 @@ public final class RandShop extends JavaPlugin implements Listener {
                         Shop shop = shops.get(uuid);
                         if (shop != null) {
                             Good good = goods.get(shop.getGood(slot));
-                            if (good != null) {
-                                good.buy(player);
+                            if (good != null && good.sell(player)) {
+                                click.setItem(slot, null);
+                                shop.setGood(slot, EMPTY_GOOD);
+                                saveShops();
                             }
                         }
                     } else {
